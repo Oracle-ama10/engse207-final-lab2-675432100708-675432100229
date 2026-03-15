@@ -6,15 +6,16 @@
 - กลุ่ม: 16
 
 ## ขอบเขตงานที่รับผิดชอบ
-
+ได้รับผิดชอบการพัฒนาระบบ microservices ครบทุกส่วนใน Set 1 รวมถึง Frontend, Backend Services (Auth, Task, Log), Database, Nginx API Gateway, และ Docker Compose รวมถึงการทดสอบและเอกสาร โดยทำงานคนเดียวเพื่อให้ระบบทำงานได้อย่างสมบูรณ์
 
 ## สิ่งที่ได้ดำเนินการด้วยตนเอง
-
+ได้พัฒนาและปรับปรุงหน้า `index.html` และ `logs.html` รวมถึง CSS/UI และ Client-side JavaScript เพื่อให้อินเทอร์เฟซผู้ใช้ใช้งานได้ง่าย ได้ตั้งค่า Nginx เป็น API Gateway ด้วย Reverse Proxy และ HTTPS Termination ได้พัฒนา Auth Service สำหรับการยืนยันตัวตนด้วย JWT, Task Service สำหรับจัดการงาน, และ Log Service สำหรับบันทึกเหตุการณ์ ได้ออกแบบ Database Schema และ `init.sql` สำหรับ PostgreSQL ได้ตั้งค่า Docker Compose เพื่อจัดการ Container และ Network ได้ทดสอบระบบ End-to-End และรวบรวมหลักฐาน รวมถึงจัดทำ README และเอกสารต่างๆ
 
 ## ปัญหาที่พบและวิธีการแก้ไข
-
+พบปัญหา 502 Bad Gateway จาก Nginx เพราะ auth-service ไม่สามารถรันได้เนื่องจากขาด module `dotenv` ได้แก้ไขโดยเพิ่ม `dotenv` ใน `package.json` และรัน `npm install` เพื่อซิงค์ `package-lock.json` พบปัญหา Docker build ล้มเหลวเนื่องจากไม่มี `package.json` ใน auth-service ได้แก้ไขโดยสร้างไฟล์ `package.json` ขึ้นมาใหม่ พบปัญหา dependency mismatch ได้แก้ไขโดยรัน `npm install` ในโฟลเดอร์ auth-service เพื่ออัปเดต lockfile
 
 ## สิ่งที่ได้เรียนรู้จากงานนี้
-
+ได้เรียนรู้การพัฒนา microservices ด้วย Node.js และ Express รวมถึงการจัดการฐานข้อมูล PostgreSQL และการใช้ Docker Compose ได้เรียนรู้การตั้งค่า Nginx เป็น reverse proxy และการจัดการ HTTPS ได้เรียนรู้การแก้ปัญหา dependency และ build issues ใน Docker รวมถึงการทดสอบระบบและการทำเอกสาร
 
 ## แนวทางการพัฒนาต่อไปใน Set 2
+ใน Set 2 จะเน้นการปรับปรุงประสิทธิภาพของระบบ เช่น การเพิ่ม caching, การปรับปรุง security, และการเพิ่มฟีเจอร์ใหม่ๆ เช่น notification system หรือ advanced logging รวมถึงการปรับปรุง UI/UX และการทดสอบ automated testing เพิ่มเติม
