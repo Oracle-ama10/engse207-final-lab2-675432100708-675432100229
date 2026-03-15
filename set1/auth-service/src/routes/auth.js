@@ -1,84 +1,105 @@
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const pool = require('../db/db');
+const express  = require('express');
+const bcrypt   = require('bcryptjs');
+const { pool } = require('../db/db');
 const { generateToken, verifyToken } = require('../middleware/jwtUtils');
 
 const router = express.Router();
 
-// Register
-router.post('/register', async (req, res) => {
-  const { email, password, name, role } = req.body;
+async function logEvent({ level, event, userId, ip, method, path, statusCode, message, meta }) {
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING user_id, email, name, role',
-      [email, hashedPassword, name, role || 'member']
-    );
-    const user = result.rows[0];
-    const token = generateToken({ sub: user.user_id, email: user.email, role: user.role, username: user.name });
-    res.json({ user, token });
-  } catch (err) {
-    res.status(400).json({ error: 'User already exists or invalid data' });
-  }
-});
+    await fetch('http://log-service:3003/api/logs/internal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service: 'auth-service', level, event,
+        user_id: userId, ip_address: ip,
+        method, path, status_code: statusCode, message, meta
+      })
+    });
+  } catch (_) {}
+}
 
-// Login
+// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  const ip = req.headers['x-real-ip'] || req.ip;
+
+  if (!email || !password)
+    return res.status(400).json({ error: 'email and password required' });
+
+  const normalizedEmail = email.toLowerCase().trim();
+
   try {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1', [normalizedEmail]
+    );
     const user = result.rows[0];
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!isValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      await logEvent({
+        level: 'WARN', event: 'LOGIN_FAILED', ip,
+        method: 'POST', path: '/api/auth/login', statusCode: 401,
+        message: `Failed login for ${normalizedEmail}`,
+        meta: { email: normalizedEmail }
+      });
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
-    const token = generateToken({ sub: user.user_id, email: user.email, role: user.role, username: user.name });
-    res.json({ user: { user_id: user.user_id, email: user.email, name: user.name, role: user.role }, token });
+
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+
+    const token = generateToken({
+      sub: user.id, email: user.email,
+      role: user.role, username: user.username
+    });
+
+    await logEvent({
+      level: 'INFO', event: 'LOGIN_SUCCESS', userId: user.id, ip,
+      method: 'POST', path: '/api/auth/login', statusCode: 200,
+      message: `User ${user.username} logged in`,
+      meta: { username: user.username, role: user.role }
+    });
+
+    res.json({
+      message: 'Login สำเร็จ', token,
+      user: { id: user.id, username: user.username, email: user.email, role: user.role }
+    });
+
   } catch (err) {
+    console.error('[AUTH] Login error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Verify token
-router.post('/verify', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-  const token = authHeader.slice(7);
+// GET /api/auth/verify
+router.get('/verify', (req, res) => {
+  const token = (req.headers['authorization'] || '').split(' ')[1];
+  if (!token) return res.status(401).json({ valid: false, error: 'No token' });
   try {
     const decoded = verifyToken(token);
-    const result = await pool.query('SELECT user_id, email, name, role FROM users WHERE user_id = $1', [decoded.sub]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-    res.json({ valid: true, user: result.rows[0] });
+    res.json({ valid: true, user: decoded });
+  } catch (err) {
+    res.status(401).json({ valid: false, error: err.message });
+  }
+});
+
+// GET /api/auth/me
+router.get('/me', async (req, res) => {
+  const token = (req.headers['authorization'] || '').split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const decoded = verifyToken(token);
+    const result  = await pool.query(
+      'SELECT id, username, email, role, created_at, last_login FROM users WHERE id = $1',
+      [decoded.sub]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
+    res.json({ user: result.rows[0] });
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
 
-// Get current user
-router.get('/me', async (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-  const token = authHeader.slice(7);
-  try {
-    const decoded = verifyToken(token);
-    const result = await pool.query('SELECT user_id, email, name, role, created_at FROM users WHERE user_id = $1', [decoded.sub]);
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-    const user = result.rows[0];
-    res.json({ user: { user_id: user.user_id, email: user.email, name: user.name, role: user.role, created_at: user.created_at } });
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-});
+// GET /api/auth/health
+router.get('/health', (_, res) => res.json({ status: 'ok', service: 'auth-service', time: new Date() }));
 
 module.exports = router;
