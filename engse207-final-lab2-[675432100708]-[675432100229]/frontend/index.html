@@ -752,7 +752,7 @@ async function doRegister() {
   const res  = await apiFetch(`${API}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password })
+    body: JSON.stringify({ username: name, email, password }) // 👈 เปลี่ยนเป็น username: name
   });
   const data = await res.json();
 
