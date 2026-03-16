@@ -16,7 +16,19 @@ async function start() {
   let retries = 10;
   while (retries > 0) {
     try { 
-      await pool.query('SELECT 1'); 
+      await pool.query('SELECT 1');
+      await pool.query(`
+  CREATE TABLE IF NOT EXISTS tasks (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    status VARCHAR(20) DEFAULT 'pending',
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+  );
+`);
+console.log('[task-service] Database is ready (Tables checked/created)');
       break; 
     }
     catch (e) {

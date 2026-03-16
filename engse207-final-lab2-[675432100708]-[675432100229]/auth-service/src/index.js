@@ -17,6 +17,17 @@ async function start() {
   while (retries > 0) {
     try { 
       await pool.query('SELECT 1'); 
+      await pool.query(`
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    role VARCHAR(20) DEFAULT 'member',
+    created_at TIMESTAMP DEFAULT NOW()
+  );
+`);
+console.log('[auth-service] Database is ready (Tables checked/created)');
       break; 
     }
     catch (e) {
