@@ -18,17 +18,27 @@ async function start() {
     try { 
       await pool.query('SELECT 1');
       await pool.query(`
-  CREATE TABLE IF NOT EXISTS tasks (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(100) NOT NULL,
-    description TEXT,
-    status VARCHAR(20) DEFAULT 'pending',
-    user_id INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-  );
-`);
-console.log('[task-service] Database is ready (Tables checked/created)');
+        CREATE TABLE IF NOT EXISTS tasks (
+          id SERIAL PRIMARY KEY,
+          title VARCHAR(100) NOT NULL,
+          description TEXT,
+          status VARCHAR(20) DEFAULT 'pending',
+          user_id INTEGER NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS logs (
+          id SERIAL PRIMARY KEY,
+          level VARCHAR(10) NOT NULL,
+          event VARCHAR(100) NOT NULL,
+          user_id INTEGER,
+          message TEXT,
+          meta JSONB,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      console.log('[task-service] Database is ready (Tables checked/created)');
       break; 
     }
     catch (e) {

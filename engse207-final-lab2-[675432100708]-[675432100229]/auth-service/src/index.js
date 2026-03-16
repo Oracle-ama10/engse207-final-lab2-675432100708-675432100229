@@ -18,16 +18,31 @@ async function start() {
     try { 
       await pool.query('SELECT 1'); 
       await pool.query(`
-  CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    role VARCHAR(20) DEFAULT 'member',
-    created_at TIMESTAMP DEFAULT NOW()
-  );
-`);
-console.log('[auth-service] Database is ready (Tables checked/created)');
+        -- ลบตารางเก่าที่สร้างผิดทิ้งไปก่อน (ฐานข้อมูลยังว่างอยู่ ลบได้ครับ)
+        DROP TABLE IF EXISTS users CASCADE;
+        
+        -- สร้างตาราง users ที่ถูกต้อง (ใช้ password_hash)
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL, 
+          email VARCHAR(100) UNIQUE NOT NULL,
+          role VARCHAR(20) DEFAULT 'member',
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+
+        -- สร้างตาราง logs สำหรับเก็บประวัติ
+        CREATE TABLE IF NOT EXISTS logs (
+          id SERIAL PRIMARY KEY,
+          level VARCHAR(10) NOT NULL,
+          event VARCHAR(100) NOT NULL,
+          user_id INTEGER,
+          message TEXT,
+          meta JSONB,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+      `);
+      console.log('[auth-service] Database is ready (Tables checked/created)');
       break; 
     }
     catch (e) {
