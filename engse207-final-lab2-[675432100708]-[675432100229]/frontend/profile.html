@@ -1,159 +1,90 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>👤 Profile & JWT — Task Board</title>
-    <style>
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; line-height: 1.5; }
-        .profile-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 2rem; max-width: 600px; margin: 3rem auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .profile-header { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; }
-        .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; }
-        .profile-info h2 { font-size: 1.25rem; margin: 0; }
-        .profile-info p { color: #94a3b8; font-size: .9rem; margin-top: 2px; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
-        .info-item label { display: block; font-size: .75rem; color: #94a3b8; margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .06em; }
-        .info-item p { font-size: .95rem; font-weight: 500; margin: 0; }
-        .edit-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #334155; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group input, .form-group textarea { width: 100%; padding: 0.6rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; margin-top: 0.3rem; }
-        .btn-save { background: #3b82f6; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; transition: 0.2s; }
-        .btn-save:hover { background: #2563eb; }
-        .role-badge { font-size: .7rem; color: white; padding: 1px 6px; border-radius: 4px; font-weight: 600; display: inline-block; }
-        .role-admin { background: #a855f7; }
-        .role-member { background: #3b82f6; }
-        .jwt-panel { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-top: 1.5rem; }
-        .jwt-panel h3 { font-size: .9rem; color: #94a3b8; margin-bottom: 1rem; }
-        .jwt-parts { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; word-break: break-all; font-family: monospace; font-size: 0.7rem; }
-        .jwt-header-part { color: #fca5a5; } .jwt-payload-part { color: #c4b5fd; } .jwt-sig-part { color: #93c5fd; }
-        .jwt-decoded pre { background: #1e293b; padding: .75rem 1rem; border-radius: 8px; overflow-x: auto; color: #e2e8f0; border: 1px solid #334155; font-size: 0.75rem; }
-        .logs-link { display: block; text-align: center; margin-top: 1.5rem; color: #94a3b8; text-decoration: none; font-size: 0.85rem; }
-        .logs-link:hover { color: white; }
-    </style>
+  <meta charset="UTF-8">
+  <title>👤 Profile — Final Lab Set 2</title>
+  <style>
+    /* CSS พื้นฐานแบบเดียวกับหน้าหลัก */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg: #0f172a; --surface: #1e293b; --border: #334155; --text: #e2e8f0; --muted: #94a3b8; --blue: #3b82f6; --blue2: #2563eb; --radius: 10px; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .profile-box { background: var(--surface); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 500px; border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    h2 { margin-bottom: 1.5rem; text-align: center; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; color: var(--muted); font-size: .85rem; margin-bottom: .4rem; }
+    .form-group input, .form-group textarea { width: 100%; padding: .75rem 1rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; }
+    .form-group textarea { min-height: 100px; resize: vertical; }
+    .btn-primary { width: 100%; padding: .85rem; background: var(--blue); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+    .btn-primary:hover { background: var(--blue2); }
+    .btn-back { display: block; text-align: center; margin-top: 1rem; color: var(--muted); text-decoration: none; font-size: .9rem; }
+    .btn-back:hover { color: var(--text); }
+  </style>
 </head>
 <body>
-    <div class="profile-card">
-        <div class="profile-header">
-            <div class="profile-avatar" id="prof-avatar">?</div>
-            <div class="profile-info">
-                <h2 id="prof-name">กำลังโหลด...</h2>
-                <p id="prof-email">---</p>
-                <span class="role-badge" id="prof-role-badge">---</span>
-            </div>
-        </div>
 
-        <div class="info-grid">
-            <div class="info-item"><label>User ID</label><p id="prof-id">---</p></div>
-            <div class="info-item"><label>Role</label><p id="prof-role">---</p></div>
-            <div class="info-item"><label>สมัครเมื่อ</label><p id="prof-created">---</p></div>
-            <div class="info-item"><label>API Source</label><p style="font-size:.8rem;color:#3b82f6">/api/users/me</p></div>
-        </div>
+<div class="profile-box">
+  <h2>👤 แก้ไขโปรไฟล์</h2>
+  <div class="form-group">
+    <label>ชื่อที่ใช้แสดง (Display Name)</label>
+    <input type="text" id="display_name" placeholder="ตั้งชื่อที่อยากให้คนอื่นเห็น">
+  </div>
+  <div class="form-group">
+    <label>คำอธิบายตัวเอง (Bio)</label>
+    <textarea id="bio" placeholder="บอกอะไรสักหน่อยเกี่ยวกับตัวคุณ..."></textarea>
+  </div>
+  <button class="btn-primary" onclick="updateProfile()">💾 บันทึกโปรไฟล์</button>
+  <a href="index.html" class="btn-back">← กลับหน้า Task Board</a>
+</div>
 
-        <div class="edit-section">
-            <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600;">🛠 แก้ไขโปรไฟล์</label>
-            <div class="form-group">
-                <input type="text" id="edit-display-name" placeholder="ชื่อเล่น / ชื่อที่ใช้แสดง">
-            </div>
-            <div class="form-group">
-                <textarea id="edit-bio" rows="2" placeholder="แนะนำตัวสั้นๆ..."></textarea>
-            </div>
-            <button class="btn-save" onclick="updateProfile()">💾 บันทึกการเปลี่ยนแปลง</button>
-        </div>
+<script src="config.js"></script>
+<script>
+const USER = window.APP_CONFIG.USER_URL;
+const token = localStorage.getItem('jwt_token');
 
-        <div class="jwt-panel">
-            <h3>🔍 JWT Token Inspector</h3>
-            <div class="jwt-parts" id="jwt-parts"></div>
-            <div class="jwt-decoded" id="jwt-decoded"></div>
-        </div>
+if (!token) window.location.href = 'index.html'; // ถ้าไม่มี token ดีดกลับไปหน้าแรก
 
-        <a href="index.html" class="logs-link">← กลับหน้า Dashboard</a>
-    </div>
+async function loadProfile() {
+  try {
+    const res  = await fetch(`${USER}/api/users/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to load profile');
+    const data = await res.json();
+    
+    document.getElementById('display_name').value = data.profile.display_name || '';
+    document.getElementById('bio').value          = data.profile.bio || '';
+  } catch (err) {
+    alert('ไม่สามารถโหลดข้อมูลโปรไฟล์ได้');
+  }
+}
 
-    <script>
-        const API = 'https://localhost';
-        let token = localStorage.getItem('jwt_token');
+async function updateProfile() {
+  const display_name = document.getElementById('display_name').value;
+  const bio          = document.getElementById('bio').value;
+  
+  try {
+    const res = await fetch(`${USER}/api/users/me`, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json' 
+      },
+      body: JSON.stringify({ display_name, bio })
+    });
+    
+    if (res.ok) {
+      alert('✅ อัปเดต Profile สำเร็จ!');
+      window.location.href = 'index.html';
+    } else {
+      alert('❌ อัปเดตไม่สำเร็จ');
+    }
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+  }
+}
 
-        function authHeaders() {
-            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
-        }
-
-        async function loadProfile() {
-            try {
-                const res = await fetch(`${API}/api/users/me`, { headers: authHeaders() });
-                const data = await res.json();
-                const u = data.user;
-
-                if (!res.ok) throw new Error('Unauthorized');
-
-                document.getElementById('prof-avatar').textContent = (u.display_name || u.username || '?')[0].toUpperCase();
-                document.getElementById('prof-name').textContent = u.display_name || u.username;
-                document.getElementById('prof-email').textContent = u.email;
-                document.getElementById('prof-id').textContent = u.user_id;
-                document.getElementById('prof-role').textContent = u.role;
-                document.getElementById('prof-created').textContent = u.updated_at ? new Date(u.updated_at).toLocaleDateString('th-TH') : '---';
-                
-                const rb = document.getElementById('prof-role-badge');
-                rb.textContent = u.role;
-                rb.className = `role-badge role-${u.role}`;
-
-                document.getElementById('edit-display-name').value = u.display_name || '';
-                document.getElementById('edit-bio').value = u.bio || '';
-
-                renderJwtInspector();
-            } catch (e) {
-                console.error(e);
-                window.location.href = 'index.html'; 
-            }
-        }
-
-        async function updateProfile() {
-            const display_name = document.getElementById('edit-display-name').value;
-            const bio = document.getElementById('edit-bio').value;
-            const btn = document.querySelector('.btn-save');
-
-            btn.textContent = 'กำลังบันทึก...';
-            btn.disabled = true;
-
-            try {
-                const res = await fetch(`${API}/api/users/me`, {
-                    method: 'PUT', headers: authHeaders(), body: JSON.stringify({ display_name, bio })
-                });
-
-                if (res.ok) {
-                    alert('✅ อัปเดตโปรไฟล์สำเร็จ!');
-                    loadProfile(); 
-                } else {
-                    alert('❌ เกิดข้อผิดพลาดในการบันทึก');
-                }
-            } catch (e) {
-                alert('❌ เชื่อมต่อ Server ไม่ได้');
-            } finally {
-                btn.textContent = '💾 บันทึกการเปลี่ยนแปลง';
-                btn.disabled = false;
-            }
-        }
-
-        function renderJwtInspector() {
-            if (!token) return;
-            const parts = token.split('.');
-            if (parts.length !== 3) return;
-
-            document.getElementById('jwt-parts').innerHTML = `
-                <span class="jwt-header-part">${parts[0]}</span>.
-                <span class="jwt-payload-part">${parts[1]}</span>.
-                <span class="jwt-sig-part">${parts[2]}</span>
-            `;
-
-            try {
-                const payload = JSON.parse(atob(parts[1]));
-                document.getElementById('jwt-decoded').innerHTML = `
-                    <p style="font-size:0.7rem; color:#94a3b8; margin-bottom:0.5rem;">Payload (Decoded):</p>
-                    <pre>${JSON.stringify(payload, null, 2)}</pre>
-                `;
-            } catch (e) { }
-        }
-
-        window.onload = loadProfile;
-    </script>
+// โหลดข้อมูลทันทีที่เปิดหน้า
+loadProfile();
+</script>
 </body>
 </html>

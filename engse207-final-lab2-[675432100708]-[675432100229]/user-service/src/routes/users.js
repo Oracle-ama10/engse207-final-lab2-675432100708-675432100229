@@ -4,7 +4,7 @@ const { requireAuth, requireRole } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// 📝 ระบบ Log ประจำ user-service (บังคับตาม Set 2)
+// 📝 ระบบ Log ประจำ user-service (ลง DB ตัวเองตาม Set 2)
 async function logEvent({ level, event, userId, message, meta }) {
   try {
     await pool.query(
@@ -16,9 +16,16 @@ async function logEvent({ level, event, userId, message, meta }) {
   }
 }
 
-// GET /api/users/me — ดูโปรไฟล์ตัวเอง (และสร้างอัตโนมัติถ้ายังไม่มี)
-router.get('/me', requireAuth, async (req, res) => {
-  // ข้อมูลเหล่านี้ได้มาจาก JWT Payload ที่แกะไว้ใน middleware (req.user)
+// 🟢 GET /api/users/health (ย้ายมาไว้บนสุด เพื่อให้ Cloud เช็คสถานะได้ง่าย)
+router.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'user-service' });
+});
+
+// ── ทุก Route ต่อจากนี้ต้องใช้ JWT Token ──
+router.use(requireAuth);
+
+// 👤 GET /api/users/me — ดูโปรไฟล์ตัวเอง (และสร้างอัตโนมัติถ้ายังไม่มี)
+router.get('/me', async (req, res) => {
   const { sub, username, email, role } = req.user;
 
   try {
@@ -27,36 +34,40 @@ router.get('/me', requireAuth, async (req, res) => {
       [sub]
     );
 
-    // 💡 ไฮไลท์ Set 2: ถ้าเพิ่งสมัครใหม่ยังไม่มีโปรไฟล์ ให้สร้างอัตโนมัติ
+    // 💡 ถ้าเป็นผู้ใช้ใหม่ ยังไม่มีข้อมูลใน user-db ให้สร้าง Profile เริ่มต้นทันที
     if (result.rows.length === 0) {
       result = await pool.query(
-        `INSERT INTO user_profiles (user_id, username, email, role) 
-         VALUES ($1, $2, $3, $4) RETURNING *`,
-        [sub, username, email, role]
+        `INSERT INTO user_profiles (user_id, username, email, role, display_name) 
+         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [sub, username, email, role, username] // ใช้ username เป็นชื่อแสดงแทนไปก่อน
       );
       
       await logEvent({ 
         level: 'INFO', event: 'PROFILE_AUTO_CREATED', userId: sub, 
-        message: `Auto-created profile for user_id ${sub}` 
+        message: `Auto-created profile for user: ${username}` 
       });
     }
 
-    res.json({ user: result.rows[0] });
+    // 🚨 สำคัญ: ส่งกลับในชื่อ "profile" เพื่อให้ตรงกับหน้าเว็บ Frontend
+    res.json({ profile: result.rows[0] });
   } catch (err) {
     console.error('[USER] /me error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// PUT /api/users/me — แก้ไขโปรไฟล์ตัวเอง (เพื่อนลืมทำอันนี้)
-router.put('/me', requireAuth, async (req, res) => {
+// ✏️ PUT /api/users/me — แก้ไขโปรไฟล์ตัวเอง
+router.put('/me', async (req, res) => {
   const { sub } = req.user;
   const { display_name, bio, avatar_url } = req.body;
 
   try {
     const result = await pool.query(
       `UPDATE user_profiles 
-       SET display_name = $1, bio = $2, avatar_url = $3, updated_at = NOW() 
+       SET display_name = COALESCE($1, display_name), 
+           bio = COALESCE($2, bio), 
+           avatar_url = COALESCE($3, avatar_url), 
+           updated_at = NOW() 
        WHERE user_id = $4 RETURNING *`,
       [display_name, bio, avatar_url, sub]
     );
@@ -67,32 +78,28 @@ router.put('/me', requireAuth, async (req, res) => {
     
     await logEvent({ 
       level: 'INFO', event: 'PROFILE_UPDATED', userId: sub, 
-      message: `User_id ${sub} updated their profile` 
+      message: `User ${sub} updated their profile` 
     });
 
-    res.json({ message: 'อัปเดตโปรไฟล์สำเร็จ', user: result.rows[0] });
+    // 🚨 ส่งกลับในชื่อ "profile" เช่นกัน
+    res.json({ message: 'อัปเดตโปรไฟล์สำเร็จ', profile: result.rows[0] });
   } catch (err) {
     console.error('[USER] Update profile error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// GET /api/users — ดู users ทั้งหมด (admin only)
-router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
+// 👑 GET /api/users — ดูรายชื่อผู้ใช้ทั้งหมด (Admin Only)
+router.get('/', requireRole('admin'), async (req, res) => {
   try {
-    // แก้คอลัมน์ name เป็น username และ display_name ให้ตรงกับ Schema จริง
     const result = await pool.query(
-      'SELECT id, user_id, username, display_name, email, role, updated_at FROM user_profiles ORDER BY id ASC'
+      'SELECT id, user_id, username, display_name, email, role, updated_at FROM user_profiles ORDER BY user_id ASC'
     );
-    res.json({ users: result.rows, total: result.rowCount });
+    res.json({ users: result.rows, count: result.rowCount });
   } catch (err) {
+    console.error('[USER] List error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
-});
-
-// GET /api/users/health
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'user-service' });
 });
 
 module.exports = router;

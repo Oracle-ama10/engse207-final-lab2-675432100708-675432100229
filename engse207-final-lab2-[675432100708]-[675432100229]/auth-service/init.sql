@@ -1,53 +1,33 @@
--- ── 1. เตรียมระบบ Cryptography ─────────────────────────────────────
--- เปิดใช้งาน Extension สำหรับเข้ารหัสผ่าน (bcrypt)
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- ── 2. สร้างตาราง Users ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
-  id             SERIAL PRIMARY KEY,
-  username       VARCHAR(50) UNIQUE NOT NULL,
-  email          VARCHAR(100) UNIQUE NOT NULL,
-  password_hash  VARCHAR(255) NOT NULL,
-  role           VARCHAR(20) DEFAULT 'member', -- member, admin
-  created_at     TIMESTAMP DEFAULT NOW(),
-  last_login     TIMESTAMP
+  id            SERIAL PRIMARY KEY,
+  username      VARCHAR(50)  UNIQUE NOT NULL,
+  email         VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role          VARCHAR(20)  DEFAULT 'member',
+  created_at    TIMESTAMP    DEFAULT NOW(),
+  last_login    TIMESTAMP
 );
 
--- ── 3. สร้างตาราง Logs (ประจำ Auth Service) ────────────────────────
+-- logs table สำหรับ auth-service (แทน Log Service แยก)
 CREATE TABLE IF NOT EXISTS logs (
-  id          SERIAL PRIMARY KEY,
-  level       VARCHAR(10)  NOT NULL, -- INFO, ERROR, WARN
-  event       VARCHAR(100) NOT NULL, -- LOGIN_SUCCESS, LOGIN_FAILED, JWT_INVALID
-  user_id     INTEGER,
-  message     TEXT,
-  meta        JSONB,
-  created_at  TIMESTAMP DEFAULT NOW()
+  id         SERIAL       PRIMARY KEY,
+  level      VARCHAR(10)  NOT NULL CHECK (level IN ('INFO','WARN','ERROR')),
+  event      VARCHAR(100) NOT NULL,
+  user_id    INTEGER,
+  ip_address VARCHAR(45),
+  message    TEXT,
+  meta       JSONB,
+  created_at TIMESTAMP    DEFAULT NOW()
 );
 
--- ── 4. Seed Data (ข้อมูลสำหรับทดสอบ) ───────────────────────────────
--- 👤 Admin
-INSERT INTO users (username, email, password_hash, role) 
-VALUES (
-  'admin', 
-  'admin@lab.local', 
-  crypt('adminpass', gen_salt('bf')), 
-  'admin'
-) ON CONFLICT (email) DO NOTHING;
+CREATE INDEX IF NOT EXISTS idx_auth_logs_created_at ON logs(created_at DESC);
 
--- 👤 Alice (Member)
-INSERT INTO users (username, email, password_hash, role) 
-VALUES (
-  'alice', 
-  'alice@lab.local', 
-  crypt('alice123', gen_salt('bf')), 
-  'member'
-) ON CONFLICT (email) DO NOTHING;
-
--- 👤 Bob (Member)
-INSERT INTO users (username, email, password_hash, role) 
-VALUES (
-  'bob', 
-  'bob@lab.local', 
-  crypt('bob456', gen_salt('bf')), 
-  'member'
-) ON CONFLICT (email) DO NOTHING;
+-- Seed users สำหรับทดสอบ (bcrypt hash จริง)
+INSERT INTO users (username, email, password_hash, role) VALUES
+  ('alice', 'alice@lab.local',
+   '$2b$10$PjnT4Aw1VHdFD89uFMsbtOunaa8XXNtp.8aGFlC4Rf2F1zAp3V.KC',
+   'member'),
+  ('admin', 'admin@lab.local',
+   '$2b$10$ZFSu9jujm16MjmDzk3fIYO36TyW7tNXJl3MGQuDkWBoiaiNJ2iFca',
+   'admin')
+ON CONFLICT (username) DO NOTHING;

@@ -1,6 +1,6 @@
 services:
 
-  # ── 1. Auth Database ──────────────────────────────────────────────
+  # ── 1. Auth Database (ก้อนที่ 1) ──────────────────────────────────
   auth-db:
     image: postgres:15-alpine
     environment:
@@ -16,7 +16,7 @@ services:
       interval: 5s
       retries: 5
 
-  # ── 2. Task Database ──────────────────────────────────────────────
+  # ── 2. Task Database (ก้อนที่ 2) ──────────────────────────────────
   task-db:
     image: postgres:15-alpine
     environment:
@@ -32,7 +32,7 @@ services:
       interval: 5s
       retries: 5
 
-  # ── 3. User Database ──────────────────────────────────────────────
+  # ── 3. User Database (ก้อนที่ 3) ──────────────────────────────────
   user-db:
     image: postgres:15-alpine
     environment:
@@ -51,15 +51,10 @@ services:
   # ── Auth Service (Port 3001) ──
   auth-service:
     build: ./auth-service
+    ports:
+      - "3001:3001" # 🚨 สำคัญมากสำหรับ Option A
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@auth-db:5432/auth_db
-      DB_HOST: auth-db
-      DB_PORT: 5432                  # 👈 เพิ่มบรรทัดนี้
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: auth_db
-      POSTGRES_USER: ${POSTGRES_USER} # 👈 เพิ่มกันเหนียว
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # 👈 เพิ่มกันเหนียว
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3001
     depends_on:
@@ -69,15 +64,10 @@ services:
   # ── Task Service (Port 3002) ──
   task-service:
     build: ./task-service
+    ports:
+      - "3002:3002" # 🚨 สำคัญมากสำหรับ Option A
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@task-db:5432/task_db
-      DB_HOST: task-db
-      DB_PORT: 5432                  # 👈 เพิ่มบรรทัดนี้
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: task_db
-      POSTGRES_USER: ${POSTGRES_USER} # 👈 เพิ่มกันเหนียว
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # 👈 เพิ่มกันเหนียว
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3002
     depends_on:
@@ -87,37 +77,21 @@ services:
   # ── User Service (Port 3003) ──
   user-service:
     build: ./user-service
+    ports:
+      - "3003:3003" # 🚨 สำคัญมากสำหรับ Option A
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/user_db
-      DB_HOST: user-db
-      DB_PORT: 5432                  # 👈 เพิ่มบรรทัดนี้
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: user_db
-      POSTGRES_USER: ${POSTGRES_USER} # 👈 เพิ่มกันเหนียว
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} # 👈 เพิ่มกันเหนียว
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3003
     depends_on:
       user-db: { condition: service_healthy }
     networks: [taskboard-net]
 
-  # ── Frontend ──
+  # ── Frontend (เสิร์ฟไฟล์หน้าเว็บ) ──
   frontend:
     build: ./frontend
-    networks: [taskboard-net]
-
-  # ── Nginx Gateway ──
-  nginx:
-    build: ./nginx
     ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - auth-service
-      - task-service
-      - user-service
-      - frontend
+      - "8080:80" # 🌐 เปิดเข้าเว็บผ่าน http://localhost:8080
     networks: [taskboard-net]
 
 volumes:
