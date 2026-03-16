@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 Log Dashboard — Final Lab</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --s2: #273448;
+      --border: #334155; --text: #e2e8f0; --muted: #94a3b8;
+      --blue: #3b82f6; --green: #22c55e; --yellow: #f59e0b;
+      --red: #ef4444; --purple: #a855f7;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem;
+    }
+    .header h1 { font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: .5rem; }
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); display: inline-block;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.3)} }
+    .header-actions { margin-left: auto; display: flex; gap: .75rem; align-items: center; }
+    .btn-sm { padding: .4rem .9rem; border-radius: 7px; font-size: .82rem; cursor: pointer; font-family: inherit; transition: all .15s; }
+    .btn-outline { background: none; border: 1px solid var(--border); color: var(--muted); }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+    .user-badge {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .35rem .85rem; border-radius: 7px;
+      background: rgba(168,85,247,.15); border: 1px solid rgba(168,85,247,.3);
+      font-size: .82rem; color: #c4b5fd;
+    }
+
+    /* ── LAYOUT ── */
+    .layout { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; padding: 1.5rem; }
+
+    /* ── STATS ── */
+    .stats-strip { display: grid; grid-template-columns: repeat(5,1fr); gap: .75rem; margin-bottom: 1.5rem; }
+    .stat-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: .9rem 1rem; text-align: center; }
+    .stat-tile .num { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+    .stat-tile .lbl { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+    .c-blue { color: var(--blue); } .c-green { color: var(--green); }
+    .c-yellow { color: var(--yellow); } .c-red { color: var(--red); } .c-purple { color: var(--purple); }
+
+    /* ── SECTION ── */
+    .section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; }
+    .section-header {
+      padding: .9rem 1.25rem; background: var(--s2); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-header h2 { font-size: .95rem; font-weight: 700; }
+    .count-badge { background: var(--blue); color: white; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 700; }
+
+    /* ── FILTER ── */
+    .filter-row { padding: .75rem 1.25rem; display: flex; gap: .5rem; flex-wrap: wrap; border-bottom: 1px solid var(--border); align-items: center; }
+    .filter-btn { padding: .35rem .85rem; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--muted); font-size: .78rem; cursor: pointer; }
+    .filter-btn.active { border-color: var(--blue); background: rgba(59,130,246,.15); color: var(--blue); }
+    .filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .filter-row select, .filter-row input {
+      padding: .35rem .75rem; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--s2); color: var(--text); font-size: .78rem; font-family: inherit;
+    }
+    .filter-row label { font-size: .78rem; color: var(--muted); }
+
+    /* ── LOG TABLE ── */
+    .log-table-header {
+      display: grid; grid-template-columns: 130px 70px 80px 80px 1fr 100px;
+      padding: .45rem 1.25rem; background: var(--s2);
+      font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border); position: sticky; top: 0;
+    }
+    .log-scroll { max-height: 460px; overflow-y: auto; }
+    .log-row {
+      display: grid; grid-template-columns: 130px 70px 80px 80px 1fr 100px;
+      padding: .55rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.04);
+      font-size: .8rem; align-items: center; transition: background .1s;
+    }
+    .log-row:hover { background: var(--s2); }
+    .chip { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: .72rem; font-weight: 600; }
+    .chip-INFO  { background: rgba(34,197,94,.15);  color: #4ade80; }
+    .chip-WARN  { background: rgba(245,158,11,.15); color: #fbbf24; }
+    .chip-ERROR { background: rgba(239,68,68,.15);  color: #fca5a5; }
+    .chip-auth  { background: rgba(59,130,246,.15); color: #93c5fd; }
+    .chip-task  { background: rgba(168,85,247,.15); color: #c4b5fd; }
+    .event-text { font-family: monospace; font-size: .75rem; }
+    .msg-text { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .time-text { font-family: monospace; font-size: .72rem; color: var(--muted); }
+    .empty-box { padding: 3rem; text-align: center; color: var(--muted); }
+    .empty-box .icon { font-size: 2.5rem; margin-bottom: .75rem; }
+    .spinner-wrap { padding: 3rem; text-align: center; color: var(--muted); }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FORBIDDEN / NO TOKEN ── */
+    .blocked-box { padding: 4rem 2rem; text-align: center; }
+    .blocked-box .icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .blocked-box h2 { font-size: 1.3rem; margin-bottom: .5rem; }
+    .blocked-box p { color: var(--muted); margin-bottom: .5rem; }
+    .blocked-box code { background: var(--s2); padding: 2px 8px; border-radius: 4px; font-size: .85rem; }
+    .btn-go { display: inline-block; margin-top: 1.25rem; padding: .6rem 1.4rem; background: var(--blue); color: white; border-radius: 8px; text-decoration: none; font-size: .9rem; font-weight: 600; }
+
+    /* ── SIDE COLUMN ── */
+    .side-col { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── JWT INSPECTOR ── */
+    .jwt-body { padding: 1.25rem; }
+    .jwt-token-display { font-family: monospace; font-size: .68rem; word-break: break-all; background: var(--bg); padding: .75rem; border-radius: 8px; border: 1px solid var(--border); line-height: 1.6; margin-bottom: 1rem; }
+    .jwt-h { color: #fca5a5; } .jwt-p { color: #c4b5fd; } .jwt-s { color: #93c5fd; }
+    .jwt-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .jwt-table td { padding: .3rem .4rem; vertical-align: top; }
+    .jwt-table td:first-child { color: var(--muted); font-weight: 600; width: 55px; white-space: nowrap; }
+    .exp-ok { color: var(--green); font-weight: 600; }
+    .exp-warn { color: var(--yellow); font-weight: 600; }
+    .exp-bad { color: var(--red); font-weight: 600; }
+
+    /* ── EVENT STATS ── */
+    .ep-body { padding: 1rem 1.25rem; }
+    .ep-row { margin-bottom: .75rem; }
+    .ep-label { display: flex; justify-content: space-between; font-size: .78rem; margin-bottom: 3px; }
+    .ep-bar-wrap { height: 6px; background: var(--s2); border-radius: 3px; overflow: hidden; }
+    .ep-bar { height: 100%; border-radius: 3px; transition: width .4s; }
+    .bar-0{background:#3b82f6} .bar-1{background:#22c55e} .bar-2{background:#f59e0b} .bar-3{background:#a855f7} .bar-4{background:#ef4444}
+
+    /* ── PAGINATION ── */
+    .pagination { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1.25rem; border-top: 1px solid var(--border); font-size: .82rem; color: var(--muted); }
+    .page-btns { display: flex; gap: .5rem; }
+    .page-btn { padding: .3rem .7rem; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; font-size: .78rem; }
+    .page-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+    .page-btn:disabled { opacity: .4; cursor: default; }
+
+    /* ── TOAST ── */
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: .5rem; }
+    .toast { padding: .7rem 1.2rem; border-radius: 10px; font-size: .85rem; font-weight: 500; animation: fadeIn .2s ease; max-width: 300px; }
+    .toast.error { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+    .toast.success { background: rgba(34,197,94,.15); color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>📊 Log Dashboard <span class="live-dot"></span></h1>
+  <span id="header-user" style="font-size:.82rem;color:var(--muted)"></span>
+  <div class="header-actions">
+    <a href="index.html" class="btn-sm btn-outline">← Task Board</a>
+    <button class="btn-sm btn-outline" onclick="loadLogs()">🔄 Refresh</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main-content">
+  <!-- จะ render ตาม state: no-token / forbidden / dashboard -->
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+const API   = 'https://localhost';
+const token = localStorage.getItem('jwt_token');
+let currentUser = null;
+let allLogs     = [];
+let filterLevel   = 'ALL';
+let filterService = 'ALL';
+let offset = 0;
+const LIMIT = 50;
+
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+async function init() {
+  if (!token) { renderNoToken(); return; }
+
+  // ตรวจสอบ token และ role
+  try {
+    const res  = await fetch(`${API}/api/auth/verify`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.valid) { renderNoToken(); return; }
+    currentUser = data.user;
+  } catch(e) { renderNoToken(); return; }
+
+  if (currentUser.role !== 'admin') { renderForbidden(); return; }
+
+  // แสดง user ใน header
+  document.getElementById('header-user').innerHTML =
+    `<span class="user-badge">👑 ${esc(currentUser.username || currentUser.email)} (admin)</span>`;
+
+  renderDashboard();
+  loadLogs();
+}
+
+/* ══════════════════════════════════════
+   RENDER STATES
+══════════════════════════════════════ */
+function renderNoToken() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="blocked-box">
+      <div class="icon">🔑</div>
+      <h2>กรุณา Login ก่อน</h2>
+      <p>ต้องมี JWT Token เพื่อเข้าถึง Log Dashboard</p>
+      <a href="index.html" class="btn-go">ไป Login →</a>
+    </div>`;
+}
+
+function renderForbidden() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="blocked-box">
+      <div class="icon">🚫</div>
+      <h2 style="color:#fca5a5">403 Forbidden</h2>
+      <p>เฉพาะ <strong>admin</strong> เท่านั้นที่เข้าถึง Log Dashboard ได้</p>
+      <p style="margin-top:.5rem">Role ของคุณ: <code>${esc(currentUser?.role || '?')}</code></p>
+      <a href="index.html" class="btn-go">กลับ Task Board</a>
+    </div>`;
+}
+
+function renderDashboard() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="layout">
+
+      <!-- LEFT -->
+      <div>
+        <!-- Stats -->
+        <div class="stats-strip">
+          <div class="stat-tile"><div class="num c-blue"  id="s-total">—</div><div class="lbl">Total</div></div>
+          <div class="stat-tile"><div class="num c-green" id="s-info">—</div><div class="lbl">INFO</div></div>
+          <div class="stat-tile"><div class="num c-yellow"id="s-warn">—</div><div class="lbl">WARN</div></div>
+          <div class="stat-tile"><div class="num c-red"   id="s-error">—</div><div class="lbl">ERROR</div></div>
+          <div class="stat-tile"><div class="num c-purple"id="s-24h">—</div><div class="lbl">24h</div></div>
+        </div>
+
+        <!-- Log Table -->
+        <div class="section">
+          <div class="section-header">
+            <h2>📋 Log Entries</h2>
+            <span class="count-badge" id="log-count">0</span>
+          </div>
+          <div class="filter-row">
+            <button class="filter-btn active" onclick="setLevel('ALL')">ทั้งหมด</button>
+            <button class="filter-btn" onclick="setLevel('INFO')">INFO</button>
+            <button class="filter-btn" onclick="setLevel('WARN')">WARN</button>
+            <button class="filter-btn" onclick="setLevel('ERROR')">ERROR</button>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:.5rem">
+              <label>Service:</label>
+              <select onchange="setService(this.value)">
+                <option value="ALL">ทั้งหมด</option>
+                <option value="auth-service">auth-service</option>
+                <option value="task-service">task-service</option>
+              </select>
+            </span>
+          </div>
+          <div class="log-table-header">
+            <span>เวลา</span><span>Level</span><span>Service</span><span>Event</span><span>Message</span><span>User/IP</span>
+          </div>
+          <div class="log-scroll" id="log-table">
+            <div class="spinner-wrap"><div class="spinner"></div><p style="margin-top:1rem">กำลังโหลด...</p></div>
+          </div>
+          <div class="pagination">
+            <span id="page-info">—</span>
+            <div class="page-btns">
+              <button class="page-btn" id="btn-prev" onclick="prevPage()" disabled>◀ ก่อนหน้า</button>
+              <button class="page-btn" id="btn-next" onclick="nextPage()" disabled>ถัดไป ▶</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="side-col">
+
+        <!-- JWT Inspector -->
+        <div class="section">
+          <div class="section-header"><h2>🔍 JWT Inspector</h2></div>
+          <div class="jwt-body" id="jwt-panel"></div>
+        </div>
+
+        <!-- Event Stats -->
+        <div class="section">
+          <div class="section-header"><h2>📈 Top Events</h2></div>
+          <div class="ep-body" id="event-stats">
+            <p style="color:var(--muted);font-size:.82rem;text-align:center">รอ data...</p>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="section">
+          <div class="section-header"><h2>📖 Events</h2></div>
+          <div style="padding:1rem 1.25rem;font-size:.8rem;line-height:2.1">
+            <div>🟢 <code>LOGIN_SUCCESS</code> — login สำเร็จ</div>
+            <div>🟡 <code>LOGIN_FAILED</code> — รหัสผ่านผิด</div>
+            <div>🔴 <code>JWT_INVALID</code> — token ผิด/หมดอายุ</div>
+            <div>🟢 <code>TASK_CREATED</code> — สร้าง task</div>
+            <div>🟢 <code>TASK_DELETED</code> — ลบ task</div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  renderJwt();
+}
+
+/* ══════════════════════════════════════
+   LOAD LOGS FROM API
+══════════════════════════════════════ */
+async function loadLogs() {
+  const logTable = document.getElementById('log-table');
+  if (!logTable) return;
+  logTable.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><p style="margin-top:1rem">กำลังโหลด...</p></div>';
+
+  try {
+    // สร้าง query params
+    const params = new URLSearchParams({ limit: LIMIT, offset });
+    if (filterLevel   !== 'ALL') params.set('level',   filterLevel);
+    if (filterService !== 'ALL') params.set('service', filterService);
+
+    const res = await fetch(`${API}/api/logs/?${params}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (res.status === 401) { renderNoToken(); return; }
+    if (res.status === 403) { renderForbidden(); return; }
+    if (!res.ok) { toast('❌ โหลด logs ไม่สำเร็จ: ' + res.status, 'error'); return; }
+
+    const data = await res.json();
+    allLogs = data.logs || [];
+    const total = data.total || 0;
+
+    renderLogTable(allLogs);
+    renderPagination(total);
+    document.getElementById('log-count').textContent = total;
+
+    // โหลด stats แยก
+    loadStats();
+
+  } catch(e) {
+    logTable.innerHTML = `<div class="empty-box"><div class="icon">❌</div><p>เชื่อมต่อ API ไม่ได้: ${esc(e.message)}</p></div>`;
+  }
+}
+
+async function loadStats() {
+  try {
+    const res  = await fetch(`${API}/api/logs/stats`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // Stats tiles
+    const total = (data.by_level || []).reduce((s, r) => s + parseInt(r.count), 0);
+    const info  = (data.by_level || []).find(r => r.level === 'INFO')?.count  || 0;
+    const warn  = (data.by_level || []).find(r => r.level === 'WARN')?.count  || 0;
+    const error = (data.by_level || []).find(r => r.level === 'ERROR')?.count || 0;
+
+    const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+    setEl('s-total', total);
+    setEl('s-info',  info);
+    setEl('s-warn',  warn);
+    setEl('s-error', error);
+    setEl('s-24h',   data.last_24h || 0);
+
+    // Top events chart
+    renderEventStats(data.top_events || []);
+
+  } catch(e) {}
+}
+
+/* ══════════════════════════════════════
+   RENDER LOG TABLE
+══════════════════════════════════════ */
+function renderLogTable(logs) {
+  const el = document.getElementById('log-table');
+  if (!el) return;
+
+  if (logs.length === 0) {
+    el.innerHTML = '<div class="empty-box"><div class="icon">📭</div><p>ไม่มี log ในช่วงนี้</p></div>';
+    return;
+  }
+
+  el.innerHTML = logs.map(log => {
+    const t = new Date(log.created_at).toLocaleString('th-TH', {
+      month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    const svcClass = log.service === 'auth-service' ? 'chip-auth' : 'chip-task';
+    const svcLabel = log.service === 'auth-service' ? 'auth' : 'task';
+    const userInfo = log.user_id
+      ? `uid:${log.user_id}`
+      : (log.ip_address ? log.ip_address.slice(0,15) : '—');
+
+    return `<div class="log-row">
+      <span class="time-text">${esc(t)}</span>
+      <span><span class="chip chip-${esc(log.level)}">${esc(log.level)}</span></span>
+      <span><span class="chip ${svcClass}">${svcLabel}</span></span>
+      <span class="event-text">${esc(log.event)}</span>
+      <span class="msg-text" title="${esc(log.message || '')}">${esc(log.message || '—')}</span>
+      <span class="time-text">${esc(userInfo)}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════
+   RENDER EVENT STATS BAR
+══════════════════════════════════════ */
+function renderEventStats(events) {
+  const el = document.getElementById('event-stats');
+  if (!el || events.length === 0) return;
+
+  const maxVal = events[0]?.count || 1;
+  el.innerHTML = events.slice(0,6).map((ev, i) => `
+    <div class="ep-row">
+      <div class="ep-label">
+        <span style="font-family:monospace;font-size:.75rem">${esc(ev.event)}</span>
+        <span style="color:var(--muted)">${ev.count}</span>
+      </div>
+      <div class="ep-bar-wrap">
+        <div class="ep-bar bar-${i%5}" style="width:${Math.round(ev.count/maxVal*100)}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════
+   PAGINATION
+══════════════════════════════════════ */
+function renderPagination(total) {
+  const info    = document.getElementById('page-info');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  if (!info) return;
+
+  const from = total === 0 ? 0 : offset + 1;
+  const to   = Math.min(offset + LIMIT, total);
+  info.textContent = `แสดง ${from}–${to} จาก ${total} รายการ`;
+
+  if (btnPrev) btnPrev.disabled = offset === 0;
+  if (btnNext) btnNext.disabled = (offset + LIMIT) >= total;
+}
+
+function prevPage() { if (offset > 0) { offset = Math.max(0, offset - LIMIT); loadLogs(); } }
+function nextPage() { offset += LIMIT; loadLogs(); }
+
+/* ══════════════════════════════════════
+   FILTERS
+══════════════════════════════════════ */
+function setLevel(level) {
+  filterLevel = level;
+  offset = 0;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active',
+      b.textContent === level ||
+      (level === 'ALL' && b.textContent === 'ทั้งหมด')
+    );
+  });
+  loadLogs();
+}
+
+function setService(svc) { filterService = svc; offset = 0; loadLogs(); }
+
+/* ══════════════════════════════════════
+   JWT INSPECTOR
+══════════════════════════════════════ */
+function renderJwt() {
+  const el = document.getElementById('jwt-panel');
+  if (!el || !token) return;
+
+  const parts = token.split('.');
+  if (parts.length !== 3) { el.innerHTML = '<p style="color:var(--muted);padding:1rem">Token format ผิด</p>'; return; }
+
+  let payload;
+  try { payload = JSON.parse(atob(parts[1])); }
+  catch(e) { el.innerHTML = '<p style="color:var(--muted);padding:1rem">Decode ไม่ได้</p>'; return; }
+
+  const msLeft  = payload.exp * 1000 - Date.now();
+  const minLeft = Math.round(msLeft / 60000);
+  let expCls, expTxt;
+  if (msLeft < 0)       { expCls='exp-bad';  expTxt=`❌ หมดอายุแล้ว!`; }
+  else if (minLeft < 5) { expCls='exp-warn'; expTxt=`⚠️ เหลือ ${minLeft} นาที`; }
+  else                  { expCls='exp-ok';   expTxt=`✅ เหลือ ${minLeft} นาที`; }
+
+  el.innerHTML = `
+    <p style="font-size:.72rem;color:var(--muted);margin-bottom:.6rem">🔴 Header · 🟣 Payload · 🔵 Signature</p>
+    <div class="jwt-token-display">
+      <span class="jwt-h">${parts[0]}</span><span style="color:var(--muted)">.</span><span class="jwt-p">${parts[1]}</span><span style="color:var(--muted)">.</span><span class="jwt-s">${parts[2]}</span>
+    </div>
+    <table class="jwt-table">
+      <tr><td>sub</td><td>${esc(payload.sub||'—')}</td></tr>
+      <tr><td>user</td><td>${esc(payload.username||payload.email||'—')}</td></tr>
+      <tr><td>role</td><td>${esc(payload.role||'—')}</td></tr>
+      <tr><td>exp</td><td><span class="${expCls}">${expTxt}</span></td></tr>
+    </table>
+    <p style="font-size:.7rem;color:var(--muted);margin-top:.75rem">💡 Payload อ่านได้โดยไม่ต้อง Secret</p>`;
+}
+
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toast(msg, type='error') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.getElementById('toast-container').prepend(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+/* ══════════════════════════════════════
+   START
+══════════════════════════════════════ */
+init();
+</script>
+</body>
+</html>
