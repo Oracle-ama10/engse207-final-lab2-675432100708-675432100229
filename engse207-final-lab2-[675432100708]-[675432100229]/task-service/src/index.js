@@ -18,16 +18,22 @@ async function start() {
     try { 
       await pool.query('SELECT 1');
       await pool.query(`
+        -- 1. สร้างตาราง tasks ใหม่ (ใส่ priority เผื่อไว้)
         CREATE TABLE IF NOT EXISTS tasks (
           id SERIAL PRIMARY KEY,
           title VARCHAR(100) NOT NULL,
           description TEXT,
           status VARCHAR(20) DEFAULT 'pending',
+          priority VARCHAR(20) DEFAULT 'medium', 
           user_id INTEGER NOT NULL,
           created_at TIMESTAMP DEFAULT NOW(),
           updated_at TIMESTAMP DEFAULT NOW()
         );
 
+        -- 2. ท่าไม้ตาย! เติมคอลัมน์ priority ลงไปในตารางเก่าที่สร้างไปแล้ว
+        ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'medium';
+
+        -- 3. สร้างตาราง logs
         CREATE TABLE IF NOT EXISTS logs (
           id SERIAL PRIMARY KEY,
           level VARCHAR(10) NOT NULL,
