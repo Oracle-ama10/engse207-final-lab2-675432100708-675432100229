@@ -18,20 +18,21 @@ async function start() {
     try { 
       await pool.query('SELECT 1'); 
       await pool.query(`
-        -- ลบตารางเก่าที่สร้างผิดทิ้งไปก่อน (ฐานข้อมูลยังว่างอยู่ ลบได้ครับ)
-        DROP TABLE IF EXISTS users CASCADE;
-        
-        -- สร้างตาราง users ที่ถูกต้อง (ใช้ password_hash)
+        -- 1. สร้างตาราง users (เพิ่ม last_login เผื่อสร้างใหม่)
         CREATE TABLE IF NOT EXISTS users (
           id SERIAL PRIMARY KEY,
           username VARCHAR(50) UNIQUE NOT NULL,
           password_hash VARCHAR(255) NOT NULL, 
           email VARCHAR(100) UNIQUE NOT NULL,
           role VARCHAR(20) DEFAULT 'member',
+          last_login TIMESTAMP,
           created_at TIMESTAMP DEFAULT NOW()
         );
 
-        -- สร้างตาราง logs สำหรับเก็บประวัติ
+        -- 2. ท่าไม้ตาย! เติมคอลัมน์ last_login ลงไปในตารางเก่าที่สร้างไปแล้ว (กัน Error)
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;
+
+        -- 3. สร้างตาราง logs
         CREATE TABLE IF NOT EXISTS logs (
           id SERIAL PRIMARY KEY,
           level VARCHAR(10) NOT NULL,
