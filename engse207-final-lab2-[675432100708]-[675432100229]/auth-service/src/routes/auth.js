@@ -5,24 +5,88 @@ const { generateToken, verifyToken } = require('../middleware/jwtUtils');
 
 const router = express.Router();
 
-async function logEvent({ level, event, userId, ip, method, path, statusCode, message, meta }) {
+// ฟังก์ชัน Log แบบใหม่ (Set 2) - บันทึกลง auth-db ของตัวเองโดยตรง
+async function logEvent({ level, event, userId, message, meta }) {
   try {
-    await fetch('http://log-service:3003/api/logs/internal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service: 'auth-service', level, event,
-        user_id: userId, ip_address: ip,
-        method, path, status_code: statusCode, message, meta
-      })
-    });
-  } catch (_) {}
+    await pool.query(
+      `INSERT INTO logs (level, event, user_id, message, meta) 
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        level, 
+        event, 
+        userId || null, 
+        message, 
+        meta ? JSON.stringify(meta) : null
+      ]
+    );
+  } catch (err) {
+    console.error('[AUTH LOG ERROR] Failed to write log:', err.message);
+  }
 }
+
+// POST /api/auth/register
+router.post('/register', async (req, res) => {
+  const { username, email, password } = req.body;
+
+  // 1. ตรวจสอบข้อมูลเบื้องต้น
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: 'username, email and password are required' });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    // 2. เช็คว่ามี username หรือ email นี้ในระบบหรือยัง
+    const checkUser = await pool.query(
+      'SELECT id FROM users WHERE email = $1 OR username = $2', 
+      [normalizedEmail, username]
+    );
+
+    if (checkUser.rows.length > 0) {
+      await logEvent({
+        level: 'WARN', event: 'REGISTER_FAILED',
+        message: `Register failed: username or email already exists (${normalizedEmail})`,
+        meta: { email: normalizedEmail, username }
+      });
+      return res.status(409).json({ error: 'Email or Username already exists' });
+    }
+
+    // 3. เข้ารหัส Password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // 4. บันทึกข้อมูลลง Database
+    const result = await pool.query(
+      `INSERT INTO users (username, email, password_hash, role) 
+       VALUES ($1, $2, $3, 'member') 
+       RETURNING id, username, email, role, created_at`,
+      [username, normalizedEmail, passwordHash]
+    );
+
+    const newUser = result.rows[0];
+
+    // 5. ส่ง Log ว่าสมัครสำเร็จ
+    await logEvent({
+      level: 'INFO', event: 'REGISTER_SUCCESS', userId: newUser.id,
+      message: `User ${newUser.username} registered successfully`,
+      meta: { username: newUser.username, email: newUser.email }
+    });
+
+    // 6. ส่ง Response กลับไป (201 Created)
+    res.status(201).json({
+      message: 'Register สำเร็จ',
+      user: newUser
+    });
+
+  } catch (err) {
+    console.error('[AUTH] Register error:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  const ip = req.headers['x-real-ip'] || req.ip;
 
   if (!email || !password)
     return res.status(400).json({ error: 'email and password required' });
@@ -37,8 +101,7 @@ router.post('/login', async (req, res) => {
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       await logEvent({
-        level: 'WARN', event: 'LOGIN_FAILED', ip,
-        method: 'POST', path: '/api/auth/login', statusCode: 401,
+        level: 'WARN', event: 'LOGIN_FAILED',
         message: `Failed login for ${normalizedEmail}`,
         meta: { email: normalizedEmail }
       });
@@ -47,14 +110,14 @@ router.post('/login', async (req, res) => {
 
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
+    // สร้าง JWT Payload ตามโจทย์ Set 2 (ข้อ 3.4)
     const token = generateToken({
       sub: user.id, email: user.email,
       role: user.role, username: user.username
     });
 
     await logEvent({
-      level: 'INFO', event: 'LOGIN_SUCCESS', userId: user.id, ip,
-      method: 'POST', path: '/api/auth/login', statusCode: 200,
+      level: 'INFO', event: 'LOGIN_SUCCESS', userId: user.id,
       message: `User ${user.username} logged in`,
       meta: { username: user.username, role: user.role }
     });
