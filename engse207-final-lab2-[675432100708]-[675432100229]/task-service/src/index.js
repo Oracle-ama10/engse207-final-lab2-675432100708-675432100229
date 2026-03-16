@@ -9,7 +9,9 @@ const PORT = process.env.PORT || 3002;
 
 app.use(cors());
 app.use(express.json());
-app.use('/api/tasks', taskRoutes);
+
+// 💡 แก้ไขตรงนี้: รับที่รากเลย เพราะ Nginx จัดการตัด /api/tasks/ ออกมาให้แล้ว
+app.use('/', taskRoutes); 
 
 async function start() {
   let retries = 10;

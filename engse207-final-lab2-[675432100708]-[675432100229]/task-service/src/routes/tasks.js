@@ -4,18 +4,16 @@ const requireAuth = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-async function logEvent({ level, event, userId, ip, method, path, statusCode, message, meta }) {
+// 📝 ระบบ Log ประจำ task-db (บันทึกลงฐานข้อมูลตัวเอง)
+async function logEvent({ level, event, userId, message, meta }) {
   try {
-    await fetch('http://log-service:3003/api/logs/internal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service: 'task-service', level, event,
-        user_id: userId, ip_address: ip,
-        method, path, status_code: statusCode, message, meta
-      })
-    });
-  } catch (_) {}
+    await pool.query(
+      `INSERT INTO logs (level, event, user_id, message, meta) VALUES ($1, $2, $3, $4, $5)`,
+      [level, event, userId || null, message, meta ? JSON.stringify(meta) : null]
+    );
+  } catch (err) {
+    console.error('[TASK LOG ERROR] Failed to write log:', err.message);
+  }
 }
 
 router.get('/health', (_, res) => res.json({ status: 'ok', service: 'task-service' }));
@@ -26,18 +24,20 @@ router.use(requireAuth);
 router.get('/', async (req, res) => {
   try {
     let result;
+    // ⚠️ ตัดการ JOIN users ออก เพราะอยู่คนละ Database
     if (req.user.role === 'admin') {
       result = await pool.query(
-        'SELECT t.*, u.username FROM tasks t JOIN users u ON t.user_id = u.id ORDER BY t.created_at DESC'
+        'SELECT * FROM tasks ORDER BY created_at DESC'
       );
     } else {
       result = await pool.query(
-        'SELECT t.*, u.username FROM tasks t JOIN users u ON t.user_id = u.id WHERE t.user_id = $1 ORDER BY t.created_at DESC',
+        'SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC',
         [req.user.sub]
       );
     }
     res.json({ tasks: result.rows, count: result.rowCount });
   } catch (err) {
+    console.error('[TASK] Fetch error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -52,13 +52,16 @@ router.post('/', async (req, res) => {
       [req.user.sub, title, description, status, priority]
     );
     const task = result.rows[0];
+    
     await logEvent({
       level: 'INFO', event: 'TASK_CREATED', userId: req.user.sub,
-      method: 'POST', path: '/api/tasks', statusCode: 201,
-      message: `Task created: "${title}"`, meta: { task_id: task.id, title }
+      message: `Task created: "${title}"`, 
+      meta: { task_id: task.id, title }
     });
+    
     res.status(201).json({ task });
   } catch (err) {
+    console.error('[TASK] Create error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -69,6 +72,8 @@ router.put('/:id', async (req, res) => {
   try {
     const check = await pool.query('SELECT * FROM tasks WHERE id = $1', [id]);
     if (!check.rows[0]) return res.status(404).json({ error: 'Task not found' });
+    
+    // ตรวจสอบสิทธิ์ (เจ้าของงาน หรือ Admin เท่านั้น)
     if (check.rows[0].user_id !== req.user.sub && req.user.role !== 'admin')
       return res.status(403).json({ error: 'Forbidden' });
 
@@ -80,8 +85,16 @@ router.put('/:id', async (req, res) => {
        WHERE id=$5 RETURNING *`,
       [title, description, status, priority, id]
     );
+
+    await logEvent({
+      level: 'INFO', event: 'TASK_UPDATED', userId: req.user.sub,
+      message: `Task ${id} updated`,
+      meta: { task_id: id }
+    });
+
     res.json({ task: result.rows[0] });
   } catch (err) {
+    console.error('[TASK] Update error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -92,17 +105,20 @@ router.delete('/:id', async (req, res) => {
   try {
     const check = await pool.query('SELECT * FROM tasks WHERE id = $1', [id]);
     if (!check.rows[0]) return res.status(404).json({ error: 'Task not found' });
+    
     if (check.rows[0].user_id !== req.user.sub && req.user.role !== 'admin')
       return res.status(403).json({ error: 'Forbidden' });
 
     await pool.query('DELETE FROM tasks WHERE id = $1', [id]);
+    
     await logEvent({
       level: 'INFO', event: 'TASK_DELETED', userId: req.user.sub,
-      method: 'DELETE', path: `/api/tasks/${id}`, statusCode: 200,
       message: `Task ${id} deleted`
     });
+    
     res.json({ message: 'Task deleted' });
   } catch (err) {
+    console.error('[TASK] Delete error:', err.message);
     res.status(500).json({ error: 'Server error' });
   }
 });

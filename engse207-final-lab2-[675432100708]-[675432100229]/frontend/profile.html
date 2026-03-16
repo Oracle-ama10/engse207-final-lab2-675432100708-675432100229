@@ -1,411 +1,159 @@
-```html
 <!DOCTYPE html>
 <html lang="th">
-
-<!-- 🌸 ============================= -->
-<!-- 🌸 HEAD : Metadata + CSS -->
-<!-- 🌸 ============================= -->
 <head>
-
-<meta charset="UTF-8">
-
-<title>Profile</title>
-
-<style>
-
-/* 🌸 ============================= */
-/* 🌸 GLOBAL STYLE */
-/* 🌸 ============================= */
-
-body{
-font-family:Segoe UI,system-ui;
-background:#0f172a;
-color:#e2e8f0;
-margin:0;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-}
-
-
-/* 🌸 ============================= */
-/* 🌸 PROFILE CARD */
-/* 🌸 กล่องข้อมูลผู้ใช้ */
-/* 🌸 ============================= */
-
-.profile-card{
-background:#1e293b;
-border:1px solid #334155;
-border-radius:10px;
-padding:2rem;
-width:600px;
-}
-
-
-/* 🌸 ============================= */
-/* 🌸 PROFILE HEADER */
-/* 🌸 ส่วน avatar + name */
-/* 🌸 ============================= */
-
-.profile-header{
-display:flex;
-align-items:center;
-gap:1rem;
-margin-bottom:1.5rem;
-}
-
-.profile-avatar{
-width:64px;
-height:64px;
-border-radius:50%;
-background:linear-gradient(135deg,#3b82f6,#a855f7);
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:1.6rem;
-font-weight:700;
-}
-
-
-/* 🌸 ============================= */
-/* 🌸 INFO GRID */
-/* 🌸 ตารางข้อมูลผู้ใช้ */
-/* 🌸 ============================= */
-
-.info-grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:1rem;
-margin-top:1rem;
-}
-
-
-/* 🌸 ============================= */
-/* 🌸 JWT PANEL */
-/* 🌸 ส่วนแสดง token */
-/* 🌸 ============================= */
-
-.jwt-panel{
-background:#0f172a;
-border:1px solid #334155;
-border-radius:8px;
-padding:1rem;
-margin-top:1.5rem;
-}
-
-pre{
-background:#1e293b;
-padding:1rem;
-border-radius:6px;
-overflow:auto;
-}
-
-</style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👤 Profile & JWT — Task Board</title>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; line-height: 1.5; }
+        .profile-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 2rem; max-width: 600px; margin: 3rem auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .profile-header { display: flex; align-items: center; gap: 1.25rem; margin-bottom: 1.5rem; }
+        .profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 700; }
+        .profile-info h2 { font-size: 1.25rem; margin: 0; }
+        .profile-info p { color: #94a3b8; font-size: .9rem; margin-top: 2px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+        .info-item label { display: block; font-size: .75rem; color: #94a3b8; margin-bottom: .4rem; text-transform: uppercase; letter-spacing: .06em; }
+        .info-item p { font-size: .95rem; font-weight: 500; margin: 0; }
+        .edit-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #334155; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group input, .form-group textarea { width: 100%; padding: 0.6rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; margin-top: 0.3rem; }
+        .btn-save { background: #3b82f6; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%; transition: 0.2s; }
+        .btn-save:hover { background: #2563eb; }
+        .role-badge { font-size: .7rem; color: white; padding: 1px 6px; border-radius: 4px; font-weight: 600; display: inline-block; }
+        .role-admin { background: #a855f7; }
+        .role-member { background: #3b82f6; }
+        .jwt-panel { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-top: 1.5rem; }
+        .jwt-panel h3 { font-size: .9rem; color: #94a3b8; margin-bottom: 1rem; }
+        .jwt-parts { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; word-break: break-all; font-family: monospace; font-size: 0.7rem; }
+        .jwt-header-part { color: #fca5a5; } .jwt-payload-part { color: #c4b5fd; } .jwt-sig-part { color: #93c5fd; }
+        .jwt-decoded pre { background: #1e293b; padding: .75rem 1rem; border-radius: 8px; overflow-x: auto; color: #e2e8f0; border: 1px solid #334155; font-size: 0.75rem; }
+        .logs-link { display: block; text-align: center; margin-top: 1.5rem; color: #94a3b8; text-decoration: none; font-size: 0.85rem; }
+        .logs-link:hover { color: white; }
+    </style>
 </head>
-
-
-
-<!-- 🌸 ============================= -->
-<!-- 🌸 BODY : PROFILE PAGE -->
-<!-- 🌸 ============================= -->
 <body>
-
-
-<!-- 🌸 ============================= -->
-<!-- 🌸 PROFILE CARD -->
-<!-- 🌸 ============================= -->
-
-<div class="profile-card">
-
-
-<!-- 🌸 ============================= -->
-<!-- 🌸 PROFILE HEADER -->
-<!-- 🌸 Avatar + Name + Email -->
-<!-- 🌸 ============================= -->
-
-<div class="profile-header">
-
-<div class="profile-avatar" id="prof-avatar">
-?
-</div>
-
-<div>
-
-<h2 id="prof-name">
-—
-</h2>
-
-<p id="prof-email">
-—
-</p>
-
-</div>
-
-</div>
-
-
-
-<!-- 🌸 ============================= -->
-<!-- 🌸 USER INFO GRID -->
-<!-- 🌸 ข้อมูลผู้ใช้ -->
-<!-- 🌸 ============================= -->
-
-<div class="info-grid">
-
-<div>
-
-<label>User ID</label>
-
-<p id="prof-id">
-—
-</p>
-
-</div>
-
-
-<div>
-
-<label>Role</label>
-
-<p id="prof-role">
-—
-</p>
-
-</div>
-
-
-<div>
-
-<label>สมัครเมื่อ</label>
-
-<p id="prof-created">
-—
-</p>
-
-</div>
-
-
-<div>
-
-<label>API</label>
-
-<p>
-GET /api/auth/me
-</p>
-
-</div>
-
-</div>
-
-
-
-<!-- 🌸 ============================= -->
-<!-- 🌸 JWT TOKEN INSPECTOR -->
-<!-- 🌸 ใช้ debug JWT token -->
-<!-- 🌸 ============================= -->
-
-<div class="jwt-panel">
-
-<h3>
-JWT Token Inspector
-</h3>
-
-<div id="jwt-parts"></div>
-
-<div id="jwt-decoded"></div>
-
-<div id="token-exp"></div>
-
-</div>
-
-
-</div>
-
-
-
-<!-- 🌸 ============================= -->
-<!-- 🌸 JAVASCRIPT SECTION -->
-<!-- 🌸 ============================= -->
-
-<script>
-
-
-/* 🌸 ============================= */
-/* 🌸 GLOBAL VARIABLES */
-/* 🌸 ============================= */
-
-const API='https://localhost'
-
-const token=localStorage.getItem('jwt_token')
-
-
-
-/* 🌸 ============================= */
-/* 🌸 TOKEN GUARD */
-/* 🌸 ถ้าไม่มี token ให้กลับหน้า login */
-/* 🌸 ============================= */
-
-if(!token){
-
-location.href='index.html'
-
-}
-
-
-
-/* 🌸 ============================= */
-/* 🌸 AUTH HEADER */
-/* 🌸 สร้าง Authorization header */
-/* 🌸 ============================= */
-
-function authHeaders(){
-
-return{
-
-'Content-Type':'application/json',
-
-'Authorization':`Bearer ${token}`
-
-}
-
-}
-
-
-
-/* 🌸 ============================= */
-/* 🌸 LOAD PROFILE */
-/* 🌸 ดึงข้อมูลผู้ใช้จาก API */
-/* 🌸 ============================= */
-
-async function loadProfile(){
-
-const res=await fetch(`${API}/api/auth/me`,{
-
-headers:authHeaders()
-
-})
-
-
-const data=await res.json()
-
-const u=data.user
-
-
-
-/* 🌸 ============================= */
-/* 🌸 RENDER USER DATA */
-/* 🌸 แสดงข้อมูลบนหน้าเว็บ */
-/* 🌸 ============================= */
-
-document.getElementById('prof-avatar').textContent=
-
-(u.name||u.email)[0].toUpperCase()
-
-
-document.getElementById('prof-name').textContent=
-
-u.name||'-'
-
-
-document.getElementById('prof-email').textContent=
-
-u.email
-
-
-document.getElementById('prof-id').textContent=
-
-u.user_id||u.id||'-'
-
-
-document.getElementById('prof-role').textContent=
-
-u.role
-
-
-document.getElementById('prof-created').textContent=
-
-u.created_at
-
-? new Date(u.created_at).toLocaleDateString('th-TH')
-
-: '-'
-
-
-
-renderJwt()
-
-}
-
-
-
-/* 🌸 ============================= */
-/* 🌸 JWT RENDER */
-/* 🌸 decode token payload */
-/* 🌸 ============================= */
-
-function renderJwt(){
-
-const parts=token.split('.')
-
-
-if(parts.length!==3)
-
-return
-
-
-
-document.getElementById('jwt-parts').innerHTML=
-
-`<pre>${parts.join('.')}</pre>`
-
-
-
-try{
-
-const payload=
-
-JSON.parse(atob(parts[1]))
-
-
-
-document.getElementById('jwt-decoded').innerHTML=
-
-`<pre>${JSON.stringify(payload,null,2)}</pre>`
-
-
-
-const exp=new Date(payload.exp*1000)
-
-const now=Date.now()
-
-
-
-document.getElementById('token-exp').textContent=
-
-exp-now<0
-
-? 'Token หมดอายุแล้ว'
-
-: 'Token ยังใช้ได้'
-
-}catch{}
-
-}
-
-
-
-/* 🌸 ============================= */
-/* 🌸 INIT PAGE */
-/* 🌸 โหลด profile ทันที */
-/* 🌸 ============================= */
-
-loadProfile()
-
-</script>
-
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar" id="prof-avatar">?</div>
+            <div class="profile-info">
+                <h2 id="prof-name">กำลังโหลด...</h2>
+                <p id="prof-email">---</p>
+                <span class="role-badge" id="prof-role-badge">---</span>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item"><label>User ID</label><p id="prof-id">---</p></div>
+            <div class="info-item"><label>Role</label><p id="prof-role">---</p></div>
+            <div class="info-item"><label>สมัครเมื่อ</label><p id="prof-created">---</p></div>
+            <div class="info-item"><label>API Source</label><p style="font-size:.8rem;color:#3b82f6">/api/users/me</p></div>
+        </div>
+
+        <div class="edit-section">
+            <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600;">🛠 แก้ไขโปรไฟล์</label>
+            <div class="form-group">
+                <input type="text" id="edit-display-name" placeholder="ชื่อเล่น / ชื่อที่ใช้แสดง">
+            </div>
+            <div class="form-group">
+                <textarea id="edit-bio" rows="2" placeholder="แนะนำตัวสั้นๆ..."></textarea>
+            </div>
+            <button class="btn-save" onclick="updateProfile()">💾 บันทึกการเปลี่ยนแปลง</button>
+        </div>
+
+        <div class="jwt-panel">
+            <h3>🔍 JWT Token Inspector</h3>
+            <div class="jwt-parts" id="jwt-parts"></div>
+            <div class="jwt-decoded" id="jwt-decoded"></div>
+        </div>
+
+        <a href="index.html" class="logs-link">← กลับหน้า Dashboard</a>
+    </div>
+
+    <script>
+        const API = 'https://localhost';
+        let token = localStorage.getItem('jwt_token');
+
+        function authHeaders() {
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        }
+
+        async function loadProfile() {
+            try {
+                const res = await fetch(`${API}/api/users/me`, { headers: authHeaders() });
+                const data = await res.json();
+                const u = data.user;
+
+                if (!res.ok) throw new Error('Unauthorized');
+
+                document.getElementById('prof-avatar').textContent = (u.display_name || u.username || '?')[0].toUpperCase();
+                document.getElementById('prof-name').textContent = u.display_name || u.username;
+                document.getElementById('prof-email').textContent = u.email;
+                document.getElementById('prof-id').textContent = u.user_id;
+                document.getElementById('prof-role').textContent = u.role;
+                document.getElementById('prof-created').textContent = u.updated_at ? new Date(u.updated_at).toLocaleDateString('th-TH') : '---';
+                
+                const rb = document.getElementById('prof-role-badge');
+                rb.textContent = u.role;
+                rb.className = `role-badge role-${u.role}`;
+
+                document.getElementById('edit-display-name').value = u.display_name || '';
+                document.getElementById('edit-bio').value = u.bio || '';
+
+                renderJwtInspector();
+            } catch (e) {
+                console.error(e);
+                window.location.href = 'index.html'; 
+            }
+        }
+
+        async function updateProfile() {
+            const display_name = document.getElementById('edit-display-name').value;
+            const bio = document.getElementById('edit-bio').value;
+            const btn = document.querySelector('.btn-save');
+
+            btn.textContent = 'กำลังบันทึก...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API}/api/users/me`, {
+                    method: 'PUT', headers: authHeaders(), body: JSON.stringify({ display_name, bio })
+                });
+
+                if (res.ok) {
+                    alert('✅ อัปเดตโปรไฟล์สำเร็จ!');
+                    loadProfile(); 
+                } else {
+                    alert('❌ เกิดข้อผิดพลาดในการบันทึก');
+                }
+            } catch (e) {
+                alert('❌ เชื่อมต่อ Server ไม่ได้');
+            } finally {
+                btn.textContent = '💾 บันทึกการเปลี่ยนแปลง';
+                btn.disabled = false;
+            }
+        }
+
+        function renderJwtInspector() {
+            if (!token) return;
+            const parts = token.split('.');
+            if (parts.length !== 3) return;
+
+            document.getElementById('jwt-parts').innerHTML = `
+                <span class="jwt-header-part">${parts[0]}</span>.
+                <span class="jwt-payload-part">${parts[1]}</span>.
+                <span class="jwt-sig-part">${parts[2]}</span>
+            `;
+
+            try {
+                const payload = JSON.parse(atob(parts[1]));
+                document.getElementById('jwt-decoded').innerHTML = `
+                    <p style="font-size:0.7rem; color:#94a3b8; margin-bottom:0.5rem;">Payload (Decoded):</p>
+                    <pre>${JSON.stringify(payload, null, 2)}</pre>
+                `;
+            } catch (e) { }
+        }
+
+        window.onload = loadProfile;
+    </script>
 </body>
-
 </html>
-```

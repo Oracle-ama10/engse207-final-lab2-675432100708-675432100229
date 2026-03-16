@@ -1,6 +1,4 @@
 const { Pool } = require('pg');
-const fs   = require('fs');
-const path = require('path');
 
 const pool = new Pool({
   host:     process.env.DB_HOST     || 'user-db',
@@ -10,10 +8,5 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || 'user_secret',
 });
 
-async function initDB() {
-  const sql = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8');
-  await pool.query(sql);
-  console.log('[user-db] Tables initialized');
-}
-
-module.exports = { pool, initDB };
+// 💡 เอาพวก fs, path และ initDB ออกให้หมด ส่งออกแค่ pool
+module.exports = { pool };
