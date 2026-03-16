@@ -1,0 +1,497 @@
+```html
+<!DOCTYPE html>
+<html lang="th">
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 HEAD : Metadata + CSS Style -->
+<!-- 🌸 ============================= -->
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Task Board</title>
+
+<style>
+
+/* 🌸 ============================= */
+/* 🌸 GLOBAL STYLE */
+/* 🌸 ============================= */
+
+body{
+font-family:Segoe UI,system-ui;
+background:#0f172a;
+color:#e2e8f0;
+margin:0;
+}
+
+.hidden{
+display:none;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 LOGIN PAGE STYLE */
+/* 🌸 ============================= */
+
+#auth-page{
+display:flex;
+align-items:center;
+justify-content:center;
+height:100vh;
+}
+
+.auth-box{
+background:#1e293b;
+padding:2rem;
+border-radius:10px;
+width:360px;
+}
+
+.form-group{
+margin-bottom:1rem;
+}
+
+input{
+width:100%;
+padding:.6rem;
+background:#0f172a;
+border:1px solid #334155;
+color:white;
+border-radius:6px;
+}
+
+button{
+padding:.6rem 1rem;
+background:#3b82f6;
+border:none;
+color:white;
+border-radius:6px;
+cursor:pointer;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 APP LAYOUT */
+/* 🌸 ============================= */
+
+#app-page{
+display:flex;
+height:100vh;
+}
+
+.sidebar{
+width:220px;
+background:#1e293b;
+border-right:1px solid #334155;
+display:flex;
+flex-direction:column;
+}
+
+.sidebar-logo{
+padding:1rem;
+font-weight:bold;
+border-bottom:1px solid #334155;
+}
+
+.sidebar-nav{
+padding:.8rem;
+flex:1;
+}
+
+.nav-item{
+display:block;
+padding:.6rem;
+color:#94a3b8;
+text-decoration:none;
+border-radius:6px;
+margin-bottom:.3rem;
+cursor:pointer;
+}
+
+.nav-item:hover{
+background:#334155;
+}
+
+.main-content{
+flex:1;
+overflow:auto;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 PAGE HEADER */
+/* 🌸 ============================= */
+
+.page-header{
+padding:1rem 2rem;
+border-bottom:1px solid #334155;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.page-body{
+padding:2rem;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 TASK CARD STYLE */
+/* 🌸 ============================= */
+
+.task-card{
+background:#1e293b;
+border:1px solid #334155;
+padding:1rem;
+border-radius:8px;
+margin-bottom:.7rem;
+}
+
+.empty-state{
+text-align:center;
+padding:2rem;
+color:#94a3b8;
+}
+
+</style>
+
+</head>
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 BODY : UI STRUCTURE -->
+<!-- 🌸 ============================= -->
+<body>
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 LOGIN PAGE -->
+<!-- 🌸 หน้าล็อกอินผู้ใช้ -->
+<!-- 🌸 ============================= -->
+
+<div id="auth-page">
+
+<div class="auth-box">
+
+<h2>เข้าสู่ระบบ</h2>
+
+<div class="form-group">
+<input id="login-email" type="email" value="alice@lab.local">
+</div>
+
+<div class="form-group">
+<input id="login-password" type="password" value="alice123">
+</div>
+
+<button onclick="doLogin()">
+Login
+</button>
+
+</div>
+
+</div>
+
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 MAIN APPLICATION -->
+<!-- 🌸 หน้าหลักหลัง Login -->
+<!-- 🌸 ============================= -->
+
+<div id="app-page" class="hidden">
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 SIDEBAR MENU -->
+<!-- 🌸 เมนูด้านซ้าย -->
+<!-- 🌸 ============================= -->
+
+<nav class="sidebar">
+
+<div class="sidebar-logo">
+Task Board
+</div>
+
+<div class="sidebar-nav">
+
+<a class="nav-item" onclick="showPage('tasks')">
+Tasks
+</a>
+
+<a class="nav-item" href="profile.html">
+Profile
+</a>
+
+<a class="nav-item" href="logs.html" target="_blank">
+Log Dashboard
+</a>
+
+</div>
+
+<div style="padding:1rem;border-top:1px solid #334155">
+<button onclick="doLogout()">Logout</button>
+</div>
+
+</nav>
+
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 MAIN CONTENT -->
+<!-- 🌸 พื้นที่แสดงข้อมูล -->
+<!-- 🌸 ============================= -->
+
+<div class="main-content">
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 TASK PAGE -->
+<!-- 🌸 หน้าแสดงรายการ Tasks -->
+<!-- 🌸 ============================= -->
+
+<div id="page-tasks">
+
+<div class="page-header">
+
+<h2>Tasks</h2>
+
+<button onclick="loadTasks()">
+Refresh
+</button>
+
+</div>
+
+
+<div class="page-body">
+
+<div id="task-list">
+
+<div class="empty-state">
+Loading...
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 JAVASCRIPT SECTION -->
+<!-- 🌸 ============================= -->
+
+<script>
+
+
+/* 🌸 ============================= */
+/* 🌸 GLOBAL VARIABLES */
+/* 🌸 ============================= */
+
+const API='https://localhost'
+
+let token=localStorage.getItem('jwt_token')
+
+let allTasks=[]
+
+
+
+/* 🌸 ============================= */
+/* 🌸 AUTH HEADER */
+/* 🌸 สร้าง Authorization Header */
+/* 🌸 ============================= */
+
+function authHeaders(){
+
+return{
+
+'Content-Type':'application/json',
+
+'Authorization':`Bearer ${token}`
+
+}
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 LOGIN FUNCTION */
+/* 🌸 ส่ง email/password ไป API */
+/* 🌸 ============================= */
+
+async function doLogin(){
+
+const email=document.getElementById('login-email').value
+
+const password=document.getElementById('login-password').value
+
+
+const res=await fetch(`${API}/api/auth/login`,{
+
+method:'POST',
+
+headers:{'Content-Type':'application/json'},
+
+body:JSON.stringify({email,password})
+
+})
+
+
+const data=await res.json()
+
+
+if(res.ok){
+
+token=data.token
+
+localStorage.setItem('jwt_token',token)
+
+initApp()
+
+}else{
+
+alert(data.error||'Login failed')
+
+}
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 LOGOUT FUNCTION */
+/* 🌸 ลบ token และ reload หน้า */
+/* 🌸 ============================= */
+
+function doLogout(){
+
+localStorage.removeItem('jwt_token')
+
+location.reload()
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 INIT APPLICATION */
+/* 🌸 เปิดหน้า app หลัง login */
+/* 🌸 ============================= */
+
+function initApp(){
+
+document.getElementById('auth-page').classList.add('hidden')
+
+document.getElementById('app-page').classList.remove('hidden')
+
+loadTasks()
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 PAGE NAVIGATION */
+/* 🌸 สลับหน้า UI */
+/* 🌸 ============================= */
+
+function showPage(page){
+
+document.getElementById('page-tasks').classList.toggle('hidden',page!=='tasks')
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 LOAD TASKS */
+/* 🌸 ดึงรายการ tasks จาก API */
+/* 🌸 ============================= */
+
+async function loadTasks(){
+
+const res=await fetch(`${API}/api/tasks/`,{
+
+headers:authHeaders()
+
+})
+
+
+if(res.status===401){
+
+alert('Session expired')
+
+doLogout()
+
+return
+
+}
+
+
+const data=await res.json()
+
+allTasks=data.tasks||[]
+
+renderTasks()
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 RENDER TASKS */
+/* 🌸 แสดง Task บนหน้าเว็บ */
+/* 🌸 ============================= */
+
+function renderTasks(){
+
+const list=document.getElementById('task-list')
+
+
+if(allTasks.length===0){
+
+list.innerHTML='<div class="empty-state">ไม่มี Task</div>'
+
+return
+
+}
+
+
+list.innerHTML=allTasks.map(t=>`
+
+<div class="task-card">
+
+<b>${t.title}</b>
+
+</div>
+
+`).join('')
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 AUTO LOGIN */
+/* 🌸 ถ้ามี token ให้เข้า app เลย */
+/* 🌸 ============================= */
+
+if(token){
+
+initApp()
+
+}
+
+</script>
+
+</body>
+
+</html>
+```
