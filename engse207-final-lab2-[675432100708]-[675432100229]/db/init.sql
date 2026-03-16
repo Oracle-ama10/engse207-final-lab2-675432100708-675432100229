@@ -93,3 +93,4 @@ INSERT INTO tasks (user_id, title, description, status, priority)
 SELECT u.id, 'Deploy บน Railway', 'ทำ Final Lab ชุดที่ 2', 'TODO', 'medium'
 FROM users u WHERE u.username = 'admin'
 ON CONFLICT DO NOTHING;
+
