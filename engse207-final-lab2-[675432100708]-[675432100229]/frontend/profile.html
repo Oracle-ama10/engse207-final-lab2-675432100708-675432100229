@@ -1,0 +1,411 @@
+```html
+<!DOCTYPE html>
+<html lang="th">
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 HEAD : Metadata + CSS -->
+<!-- 🌸 ============================= -->
+<head>
+
+<meta charset="UTF-8">
+
+<title>Profile</title>
+
+<style>
+
+/* 🌸 ============================= */
+/* 🌸 GLOBAL STYLE */
+/* 🌸 ============================= */
+
+body{
+font-family:Segoe UI,system-ui;
+background:#0f172a;
+color:#e2e8f0;
+margin:0;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 PROFILE CARD */
+/* 🌸 กล่องข้อมูลผู้ใช้ */
+/* 🌸 ============================= */
+
+.profile-card{
+background:#1e293b;
+border:1px solid #334155;
+border-radius:10px;
+padding:2rem;
+width:600px;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 PROFILE HEADER */
+/* 🌸 ส่วน avatar + name */
+/* 🌸 ============================= */
+
+.profile-header{
+display:flex;
+align-items:center;
+gap:1rem;
+margin-bottom:1.5rem;
+}
+
+.profile-avatar{
+width:64px;
+height:64px;
+border-radius:50%;
+background:linear-gradient(135deg,#3b82f6,#a855f7);
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:1.6rem;
+font-weight:700;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 INFO GRID */
+/* 🌸 ตารางข้อมูลผู้ใช้ */
+/* 🌸 ============================= */
+
+.info-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:1rem;
+margin-top:1rem;
+}
+
+
+/* 🌸 ============================= */
+/* 🌸 JWT PANEL */
+/* 🌸 ส่วนแสดง token */
+/* 🌸 ============================= */
+
+.jwt-panel{
+background:#0f172a;
+border:1px solid #334155;
+border-radius:8px;
+padding:1rem;
+margin-top:1.5rem;
+}
+
+pre{
+background:#1e293b;
+padding:1rem;
+border-radius:6px;
+overflow:auto;
+}
+
+</style>
+
+</head>
+
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 BODY : PROFILE PAGE -->
+<!-- 🌸 ============================= -->
+<body>
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 PROFILE CARD -->
+<!-- 🌸 ============================= -->
+
+<div class="profile-card">
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 PROFILE HEADER -->
+<!-- 🌸 Avatar + Name + Email -->
+<!-- 🌸 ============================= -->
+
+<div class="profile-header">
+
+<div class="profile-avatar" id="prof-avatar">
+?
+</div>
+
+<div>
+
+<h2 id="prof-name">
+—
+</h2>
+
+<p id="prof-email">
+—
+</p>
+
+</div>
+
+</div>
+
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 USER INFO GRID -->
+<!-- 🌸 ข้อมูลผู้ใช้ -->
+<!-- 🌸 ============================= -->
+
+<div class="info-grid">
+
+<div>
+
+<label>User ID</label>
+
+<p id="prof-id">
+—
+</p>
+
+</div>
+
+
+<div>
+
+<label>Role</label>
+
+<p id="prof-role">
+—
+</p>
+
+</div>
+
+
+<div>
+
+<label>สมัครเมื่อ</label>
+
+<p id="prof-created">
+—
+</p>
+
+</div>
+
+
+<div>
+
+<label>API</label>
+
+<p>
+GET /api/auth/me
+</p>
+
+</div>
+
+</div>
+
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 JWT TOKEN INSPECTOR -->
+<!-- 🌸 ใช้ debug JWT token -->
+<!-- 🌸 ============================= -->
+
+<div class="jwt-panel">
+
+<h3>
+JWT Token Inspector
+</h3>
+
+<div id="jwt-parts"></div>
+
+<div id="jwt-decoded"></div>
+
+<div id="token-exp"></div>
+
+</div>
+
+
+</div>
+
+
+
+<!-- 🌸 ============================= -->
+<!-- 🌸 JAVASCRIPT SECTION -->
+<!-- 🌸 ============================= -->
+
+<script>
+
+
+/* 🌸 ============================= */
+/* 🌸 GLOBAL VARIABLES */
+/* 🌸 ============================= */
+
+const API='https://localhost'
+
+const token=localStorage.getItem('jwt_token')
+
+
+
+/* 🌸 ============================= */
+/* 🌸 TOKEN GUARD */
+/* 🌸 ถ้าไม่มี token ให้กลับหน้า login */
+/* 🌸 ============================= */
+
+if(!token){
+
+location.href='index.html'
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 AUTH HEADER */
+/* 🌸 สร้าง Authorization header */
+/* 🌸 ============================= */
+
+function authHeaders(){
+
+return{
+
+'Content-Type':'application/json',
+
+'Authorization':`Bearer ${token}`
+
+}
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 LOAD PROFILE */
+/* 🌸 ดึงข้อมูลผู้ใช้จาก API */
+/* 🌸 ============================= */
+
+async function loadProfile(){
+
+const res=await fetch(`${API}/api/auth/me`,{
+
+headers:authHeaders()
+
+})
+
+
+const data=await res.json()
+
+const u=data.user
+
+
+
+/* 🌸 ============================= */
+/* 🌸 RENDER USER DATA */
+/* 🌸 แสดงข้อมูลบนหน้าเว็บ */
+/* 🌸 ============================= */
+
+document.getElementById('prof-avatar').textContent=
+
+(u.name||u.email)[0].toUpperCase()
+
+
+document.getElementById('prof-name').textContent=
+
+u.name||'-'
+
+
+document.getElementById('prof-email').textContent=
+
+u.email
+
+
+document.getElementById('prof-id').textContent=
+
+u.user_id||u.id||'-'
+
+
+document.getElementById('prof-role').textContent=
+
+u.role
+
+
+document.getElementById('prof-created').textContent=
+
+u.created_at
+
+? new Date(u.created_at).toLocaleDateString('th-TH')
+
+: '-'
+
+
+
+renderJwt()
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 JWT RENDER */
+/* 🌸 decode token payload */
+/* 🌸 ============================= */
+
+function renderJwt(){
+
+const parts=token.split('.')
+
+
+if(parts.length!==3)
+
+return
+
+
+
+document.getElementById('jwt-parts').innerHTML=
+
+`<pre>${parts.join('.')}</pre>`
+
+
+
+try{
+
+const payload=
+
+JSON.parse(atob(parts[1]))
+
+
+
+document.getElementById('jwt-decoded').innerHTML=
+
+`<pre>${JSON.stringify(payload,null,2)}</pre>`
+
+
+
+const exp=new Date(payload.exp*1000)
+
+const now=Date.now()
+
+
+
+document.getElementById('token-exp').textContent=
+
+exp-now<0
+
+? 'Token หมดอายุแล้ว'
+
+: 'Token ยังใช้ได้'
+
+}catch{}
+
+}
+
+
+
+/* 🌸 ============================= */
+/* 🌸 INIT PAGE */
+/* 🌸 โหลด profile ทันที */
+/* 🌸 ============================= */
+
+loadProfile()
+
+</script>
+
+</body>
+
+</html>
+```
